@@ -1,0 +1,48 @@
+<div *ngIf="loading()" class="text-center py-8">Chargement…</div>
+
+<div *ngIf="!loading()">
+  <!-- summary cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white p-4 rounded-lg shadow">
+      <div class="text-sm text-gray-500">Pharmacies</div>
+      <div class="text-2xl font-bold">{{ summary()?.pharmacies }}</div>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg shadow">
+      <div class="text-sm text-gray-500">Utilisateurs</div>
+      <div class="text-2xl font-bold">{{ summary()?.users }}</div>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg shadow">
+      <div class="text-sm text-gray-500">Ventes aujourd'hui</div>
+      <div class="text-2xl font-bold">{{ summary()?.salesToday | number }}</div>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg shadow">
+      <div class="text-sm text-gray-500">Produits bas stock</div>
+      <div class="text-2xl font-bold">{{ summary()?.lowStockCount }}</div>
+    </div>
+  </div>
+
+  <!-- charts + recent activities -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="col-span-2 bg-white p-4 rounded-lg shadow">
+      <h3 class="text-lg font-medium mb-4">Ventes (7 jours)</h3>
+      <canvas baseChart
+              [data]="lineChartData"
+              [options]="lineChartOptions"
+              [type]="lineChartType">
+      </canvas>
+    </div>
+
+    <div class="bg-white p-4 rounded-lg shadow">
+      <h3 class="text-lg font-medium mb-3">Activité récente</h3>
+      <ul class="text-sm space-y-2">
+        <li *ngFor="let item of [1,2,3,4]">
+          <div class="text-gray-700">Commande #00{{ item }} reçue</div>
+          <div class="text-xs text-gray-500">il y a {{ item }} heure(s)</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
