@@ -2,7 +2,9 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
 import { UserService } from '../../../core/services/user.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { last } from 'rxjs';
 @Component({
   selector: 'app-profile',
@@ -15,6 +17,9 @@ export class Profile implements OnInit {
   private userService = inject(UserService);
   private fb = inject(FormBuilder);
   private http = inject(HttpClient);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
+  private authService = inject(AuthService);
   
   user = this.userService.user;
   loading = signal(true);
@@ -27,13 +32,21 @@ export class Profile implements OnInit {
   
   showPasswordForm = signal(false);
   showDeleteConfirm = signal(false);
-  
+  userId = signal<number | null>(null);
+  canChangePassword = signal(true);
 
   ngOnInit(): void {
     this.initForms();
-    this.loadUserData();
-    console.log('User data loaded:', this.user());
-    console.log('Profile form initialized:', this.profileForm.value);
+    
+    // Vérifier si c'est un profil d'utilisateur spécifique
+    this.route.params.subscribe(params => {
+      if (params['id']) {
+        this.userId.set(params['id']);
+        this.loadUserById(params['id']);
+      } else {
+        this.loadUserData();
+      }
+    });
   }
 
   private initForms(): void {
@@ -64,7 +77,46 @@ export class Profile implements OnInit {
         last_login: currentUser.last_visit_at || ''
       });
     }
+    // Lors de la consultation de votre propre profil, autorisez la modification du mot de passe
+    this.canChangePassword.set(true);
     this.loading.set(false);
+  }
+
+  /**
+   * Charger les données d'un utilisateur spécifique par ID
+   */
+  private loadUserById(userId: number): void {
+    this.authService.getUserById(userId).subscribe({
+      next: (response: any) => {
+        const userData = response?.user ?? response;
+        if (!userData) {
+          console.error('Response user not found:', response);
+          this.errorMessage.set('Utilisateur introuvable');
+          this.loading.set(false);
+          return;
+        }
+        this.user.set(userData);
+        this.profileForm.patchValue({
+          name: userData.name ?? '',
+          email: userData.email ?? '',
+          last_login: userData.last_visit_at || ''
+        });
+        // Désactiver la modification du mot de passe lors de la consultation du profil d'un autre utilisateur
+        const current = this.authService.getSessionInfo();
+        if (current && current.id && current.id === userData.id) {
+          this.canChangePassword.set(true);
+        } else {
+          this.canChangePassword.set(false);
+        }
+
+        this.loading.set(false);
+      },
+      error: (err) => {
+        console.error('Erreur chargement utilisateur:', err);
+        this.errorMessage.set('Impossible de charger le profil utilisateur');
+        this.loading.set(false);
+      }
+    });
   }
 
   updateProfile(): void {

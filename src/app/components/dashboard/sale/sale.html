@@ -1,0 +1,638 @@
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
+  <!-- ══ Header ═══════════════════════════════════════════════════════════════ -->
+  <div class="bg-white border-b border-slate-200 sticky top-16 z-40 backdrop-blur-lg bg-white/95">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center space-x-4">
+          <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-slate-900">Point de Vente</h1>
+            <p class="text-xs text-slate-500">Gestion des ventes pharmaceutiques</p>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex gap-2 bg-slate-100 p-1 rounded-lg">
+          <button (click)="switchView('create')"
+            [class]="activeView()==='create' ? 'px-4 py-2 bg-white text-purple-600 font-semibold rounded-md shadow-sm' : 'px-4 py-2 text-slate-600 hover:text-purple-600'">
+            Nouvelle Vente
+          </button>
+          <button (click)="switchView('list')"
+            [class]="activeView()==='list' ? 'px-4 py-2 bg-white text-purple-600 font-semibold rounded-md shadow-sm' : 'px-4 py-2 text-slate-600 hover:text-purple-600'">
+            Historique ({{ totalSales() }})
+          </button>
+          <button (click)="switchView('logs')"
+            [class]="activeView()==='logs' ? 'px-4 py-2 bg-white text-purple-600 font-semibold rounded-md shadow-sm' : 'px-4 py-2 text-slate-600 hover:text-purple-600'">
+            <div class="flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Logs ({{ syncHistoryTotal() }})</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Stats -->
+        <div class="flex items-center gap-3">
+          <div class="px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
+            <div class="text-xs text-slate-500 font-medium">Aujourd'hui</div>
+            <div class="text-lg font-bold text-purple-600">{{ todaySalesCount }}</div>
+          </div>
+          <div class="px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
+            <div class="text-xs text-slate-500 font-medium">Total</div>
+            <div class="text-sm font-bold text-emerald-600">{{ formatCurrency(todaySalesTotal) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ══ VUE CRÉER VENTE ════════════════════════════════════════════════════ -->
+    @if (activeView() === 'create') {
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- Zone principale 2/3 -->
+        <div class="lg:col-span-2 space-y-6">
+
+          <!-- ── Sélection Client ──────────────────────────────────────────── -->
+          <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+            <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+              <span>1. Sélectionner le Client</span>
+            </h3>
+
+            <!-- Boutons type client -->
+            <div class="flex gap-3 mb-4">
+              <button (click)="selectClientType('registered')"
+                [class]="clientType()==='registered'
+                  ? 'flex-1 px-4 py-3 bg-purple-100 border-2 border-purple-500 text-purple-700 font-semibold rounded-lg'
+                  : 'flex-1 px-4 py-3 bg-slate-50 border-2 border-slate-200 text-slate-600 hover:border-purple-300 rounded-lg'">
+                <div class="flex items-center justify-center space-x-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  <span>Client Enregistré</span>
+                </div>
+              </button>
+              <button (click)="selectClientType('walkin')"
+                [class]="clientType()==='walkin'
+                  ? 'flex-1 px-4 py-3 bg-purple-100 border-2 border-purple-500 text-purple-700 font-semibold rounded-lg'
+                  : 'flex-1 px-4 py-3 bg-slate-50 border-2 border-slate-200 text-slate-600 hover:border-purple-300 rounded-lg'">
+                <div class="flex items-center justify-center space-x-2">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                  <span>Client de Passage</span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Alerte compte bloqué -->
+            @if (spendingWarning()?.type === 'blocked') {
+              <div class="mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-xl flex items-start space-x-3">
+                <svg class="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                <div>
+                  <div class="font-bold text-red-700">Compte bloqué</div>
+                  <div class="text-sm text-red-600 mt-0.5">{{ spendingWarning()?.message }}</div>
+                  <div class="text-xs text-red-500 mt-1">Aucune vente ne peut être effectuée sur ce compte.</div>
+                </div>
+              </div>
+            }
+
+            @if (clientType() === 'registered') {
+              <!-- Client sélectionné -->
+              @if (selectedClient()) {
+                <div>
+                  <div [class]="'p-4 rounded-xl border-2 flex items-center justify-between ' + (selectedClient()!.is_active === false ? 'bg-red-50 border-red-300' : 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200')">
+                    <div class="flex items-center space-x-3">
+                      <div [class]="'w-10 h-10 rounded-full flex items-center justify-center text-white font-bold shadow-lg ' + (isSubAccount(selectedClient()!) ? 'bg-gradient-to-br from-purple-400 to-pink-500' : 'bg-purple-600')">
+                        {{ selectedClient()!.first_name.charAt(0) }}{{ selectedClient()!.last_name.charAt(0) }}
+                      </div>
+                      <div>
+                        <div class="font-bold text-slate-900 flex items-center gap-2">
+                          {{ selectedClient()!.first_name }} {{ selectedClient()!.last_name }}
+                          @if (isSubAccount(selectedClient()!)) {
+                            <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">{{ getRelationshipLabel(selectedClient()!.relationship) }}</span>
+                          }
+                          @if (selectedClient()!.is_active === false) {
+                            <span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs font-bold rounded-full">Bloqué</span>
+                          }
+                        </div>
+                        <!-- Remise -->
+                        @if (selectedClient()!.discount_percentage) {
+                          <div class="text-xs text-purple-600 font-semibold">Remise: {{ selectedClient()!.discount_percentage }}%</div>
+                        }
+                        <!-- Parent (si sous-compte) -->
+                        @if (isSubAccount(selectedClient()!) && selectedClient()!.parentClient) {
+                          <div class="text-xs text-slate-400">↳ {{ selectedClient()!.parentClient!.first_name }} {{ selectedClient()!.parentClient!.last_name }}</div>
+                        }
+                      </div>
+                    </div>
+                    <button (click)="unselectClient()" class="p-2 hover:bg-red-100 text-red-600 rounded-lg transition-colors">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+
+                  <!-- ── Widget Plafond ─────────────────────────────────────── -->
+                  @if (selectedClient()!.spending_limit && selectedClient()!.is_active !== false) {
+                    <div [class]="'mt-3 p-3 rounded-xl border ' + (cartExceedsLimit() ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200')">
+                      <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-xs font-bold text-slate-700 flex items-center gap-1">
+                          <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                          Plafond mensuel
+                        </span>
+                        <span [class]="'text-xs font-bold ' + (cartExceedsLimit() ? 'text-red-600' : 'text-slate-600')">
+                          {{ clientSpendingPercent() }}% utilisé
+                        </span>
+                      </div>
+                      <!-- Barre progression -->
+                      <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden mb-2">
+                        <div [class]="'h-2 rounded-full transition-all duration-500 ' + getSpendingBarColor(clientSpendingPercent())"
+                          [style.width.%]="clientSpendingPercent()"></div>
+                      </div>
+                      <div class="flex justify-between text-xs text-slate-500">
+                        <span>Dépensé : <strong class="text-slate-700">{{ formatCurrency(selectedClient()!.current_month_spending) }}</strong></span>
+                        <span>Limite : <strong class="text-slate-700">{{ formatCurrency(selectedClient()!.spending_limit) }}</strong></span>
+                      </div>
+                      @if (clientRemainingBudget() !== null) {
+                        <div [class]="'mt-2 text-xs font-semibold text-center py-1 rounded-lg ' + (cartExceedsLimit() ? 'bg-red-100 text-red-700' : 'bg-emerald-50 text-emerald-700')">
+                          @if (cartExceedsLimit()) {
+                            ⚠️ Panier dépasse le budget restant ({{ formatCurrency(clientRemainingBudget()) }} disponible)
+                          } @else {
+                            ✓ Budget restant : {{ formatCurrency(clientRemainingBudget()) }}
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <!-- Recherche client -->
+                <div>
+                  <input type="text" [value]="clientSearchQuery()"
+                    (input)="searchClients($any($event.target).value)"
+                    placeholder="Rechercher un client..."
+                    class="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none mb-3">
+                  <div class="max-h-52 overflow-y-auto space-y-2">
+                    @for (client of filteredClients(); track trackByClientId($index, client)) {
+                      <button (click)="selectClient(client)"
+                        [disabled]="client.is_active === false"
+                        [class]="'w-full p-3 border rounded-lg text-left transition-all ' + (client.is_active === false ? 'opacity-50 cursor-not-allowed bg-red-50 border-red-200' : 'bg-slate-50 hover:bg-purple-50 border-slate-200 hover:border-purple-300')">
+                        <div class="flex items-center justify-between">
+                          <div>
+                            <div class="flex items-center gap-2">
+                              <div [class]="'w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ' + (isSubAccount(client) ? 'bg-gradient-to-br from-purple-400 to-pink-500' : 'bg-purple-500')">
+                                {{ client.first_name.charAt(0) }}{{ client.last_name.charAt(0) }}
+                              </div>
+                              <div>
+                                <div class="font-semibold text-slate-900 text-sm flex items-center gap-1">
+                                  {{ client.first_name }} {{ client.last_name }}
+                                  @if (client.is_active === false) {
+                                    <span class="text-red-500 text-xs font-bold">🚫 Bloqué</span>
+                                  }
+                                </div>
+                                <div class="text-xs text-slate-400 flex items-center gap-2">
+                                  @if (isSubAccount(client)) {
+                                    <span class="text-purple-500">{{ getRelationshipLabel(client.relationship) }}</span>
+                                  }
+                                  @if (client.discount_percentage) {
+                                    <span class="text-emerald-600 font-medium">Remise: {{ client.discount_percentage }}%</span>
+                                  }
+                                  @if (client.spending_limit) {
+                                    <span class="text-slate-400">Plafond: {{ formatCurrency(client.spending_limit) }}/mois</span>
+                                  }
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          @if (client.is_active !== false) {
+                            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                          }
+                        </div>
+                      </button>
+                    } @empty {
+                      <div class="text-center py-4 text-slate-500 text-sm">Aucun client trouvé</div>
+                    }
+                  </div>
+                </div>
+              }
+            }
+
+            @if (clientType() === 'walkin') {
+              <input type="text" [value]="walkinClientName()"
+                (input)="setWalkinName($any($event.target).value)"
+                placeholder="Nom du client de passage..."
+                class="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none">
+            }
+          </div>
+
+          <!-- ── Sélection Produits ─────────────────────────────────────────── -->
+          <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+            <h3 class="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+              </svg>
+              <span>2. Ajouter des Produits</span>
+            </h3>
+            <input type="text" [value]="productSearchQuery()"
+              (input)="searchProducts($any($event.target).value)"
+              placeholder="Rechercher un médicament (nom, CIP, laboratoire)..."
+              class="w-full px-4 py-3 border-2 border-slate-200 rounded-lg focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none mb-4">
+            <div class="max-h-96 overflow-y-auto space-y-2">
+              @for (product of filteredProducts(); track trackByProductId($index, product)) {
+                <div class="p-4 bg-slate-50 hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-lg transition-all">
+                  <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                      <div class="font-semibold text-slate-900">{{ product.name }}</div>
+                      <div class="flex items-center space-x-3 mt-1 text-sm">
+                        @if (product.cip)        { <span class="text-slate-500">CIP: {{ product.cip }}</span> }
+                        @if (product.laboratory) { <span class="text-slate-500">{{ product.laboratory }}</span> }
+                        <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-semibold text-xs">Stock: {{ product.global_stock }}</span>
+                      </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                      <div class="text-right">
+                        <div class="text-lg font-bold text-emerald-600">{{ formatCurrency(product.selling_price) }}</div>
+                        @if (selectedClient()?.discount_percentage) {
+                          <div class="text-xs text-purple-600 font-medium">-{{ selectedClient()!.discount_percentage }}%</div>
+                        }
+                      </div>
+                      <button (click)="addProductToCart(product)" [disabled]="product.global_stock <= 0"
+                        class="p-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              } @empty {
+                <div class="text-center py-8 text-slate-500">
+                  <svg class="w-12 h-12 mx-auto mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg>
+                  Aucun produit trouvé
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Panier 1/3 ──────────────────────────────────────────────────── -->
+        <div class="lg:col-span-1">
+          <div class="sticky top-32">
+            <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                  <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  <span>Panier</span>
+                  @if (cartItemsCount() > 0) {
+                    <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">{{ cartItemsCount() }}</span>
+                  }
+                </h3>
+                @if (cart().length > 0) {
+                  <button (click)="clearCart()" class="text-red-600 hover:text-red-700 text-sm font-medium">Vider</button>
+                }
+              </div>
+
+              @if (cart().length > 0) {
+                <!-- Articles -->
+                <div class="space-y-3 mb-4 max-h-64 overflow-y-auto">
+                  @for (item of cart(); track item.product.id) {
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                      <div class="flex items-start justify-between mb-2">
+                        <div class="flex-1 pr-2">
+                          <div class="font-semibold text-slate-900 text-sm">{{ item.product.name }}</div>
+                          <div class="text-xs text-slate-500 mt-0.5">{{ formatCurrency(item.unit_price) }} × {{ item.quantity }}</div>
+                        </div>
+                        <button (click)="removeFromCart(item.product.id)" class="p-1 hover:bg-red-100 text-red-600 rounded">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                      </div>
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-2">
+                          <button (click)="updateQuantity(item.product.id, item.quantity - 1)" class="w-7 h-7 bg-white border border-slate-300 rounded hover:bg-slate-50 flex items-center justify-center">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                          </button>
+                          <span class="w-8 text-center font-semibold text-sm">{{ item.quantity }}</span>
+                          <button (click)="updateQuantity(item.product.id, item.quantity + 1)" class="w-7 h-7 bg-white border border-slate-300 rounded hover:bg-slate-50 flex items-center justify-center">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                          </button>
+                        </div>
+                        <div class="text-right">
+                          <div class="font-bold text-emerald-600 text-sm">{{ formatCurrency(item.total) }}</div>
+                          @if (item.discount_amount > 0) {
+                            <div class="text-xs text-purple-600">-{{ formatCurrency(item.discount_amount) }}</div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  }
+                </div>
+
+                <!-- Totaux -->
+                <div class="border-t border-slate-200 pt-4 space-y-2 mb-4">
+                  <div class="flex justify-between text-sm">
+                    <span class="text-slate-600">Sous-total</span>
+                    <span class="font-semibold">{{ formatCurrency(cartSubtotal()) }}</span>
+                  </div>
+                  @if (cartDiscount() > 0) {
+                    <div class="flex justify-between text-sm text-purple-600">
+                      <span>Remise client</span>
+                      <span class="font-semibold">-{{ formatCurrency(cartDiscount()) }}</span>
+                    </div>
+                  }
+                  <div class="flex justify-between text-lg font-bold text-emerald-600 pt-2 border-t border-slate-200">
+                    <span>Total</span>
+                    <span>{{ formatCurrency(cartTotal()) }}</span>
+                  </div>
+
+                  <!-- Alerte plafond dépassement dans le panier -->
+                  @if (cartExceedsLimit()) {
+                    <div class="p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 font-semibold flex items-center gap-1.5">
+                      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                      Panier dépasse le budget restant du client
+                    </div>
+                  }
+                </div>
+
+                <!-- Alerte serveur plafond dépassé (après soumission) -->
+                @if (spendingWarning()?.type === 'exceeded') {
+                  <div class="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="font-bold text-red-700 text-sm flex items-center gap-1.5">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                      {{ spendingWarning()!.message }}
+                    </div>
+                    @if (spendingWarning()!.spendingInfo; as info) {
+                      <div class="mt-2 text-xs text-red-600 space-y-0.5">
+                        <div>Limite : {{ formatCurrency(info.limit) }}</div>
+                        <div>Dépensé : {{ formatCurrency(info.current) }}</div>
+                        <div>Disponible : {{ formatCurrency(info.remaining) }}</div>
+                        <div>Réinitialisation : {{ info.reset_date | date:'dd/MM/yyyy' }}</div>
+                      </div>
+                    }
+                  </div>
+                }
+
+                <!-- Formulaire paiement -->
+                <form [formGroup]="saleForm" (ngSubmit)="createSale()" class="space-y-3">
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Méthode de Paiement</label>
+                    <select formControlName="payment_method" class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none bg-white">
+                      @for (m of paymentMethods; track m.value) { <option [value]="m.value">{{ m.icon }} {{ m.label }}</option> }
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Référence (optionnel)</label>
+                    <input type="text" formControlName="reference" placeholder="Auto-générée" class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none">
+                  </div>
+                  <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-2">Notes</label>
+                    <textarea formControlName="note" rows="2" placeholder="Notes..." class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 outline-none resize-none"></textarea>
+                  </div>
+
+                  <button type="submit"
+                    [disabled]="isCreating() || (selectedClient()?.is_active === false)"
+                    [class]="'w-full px-6 py-3 font-bold rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 '
+                      + (selectedClient()?.is_active === false ? 'bg-red-400 text-white cursor-not-allowed' : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white')">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      @if (selectedClient()?.is_active === false) {
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                      } @else {
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                      }
+                    </svg>
+                    <span>{{ selectedClient()?.is_active === false ? 'Compte bloqué' : (isCreating() ? 'Création...' : 'Finaliser la Vente') }}</span>
+                  </button>
+                </form>
+
+                @if (createError()) {
+                  <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{{ createError() }}</div>
+                }
+              } @else {
+                <div class="text-center py-8 text-slate-400">
+                  <svg class="w-16 h-16 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                  <p class="text-sm">Panier vide</p>
+                  <p class="text-xs mt-1">Ajoutez des produits pour commencer</p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ══ VUE LISTE VENTES ═══════════════════════════════════════════════════ -->
+    @if (activeView() === 'list') {
+      <div class="space-y-6">
+        <!-- Sync cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-4 text-white shadow-lg">
+            <div class="flex items-center justify-between">
+              <svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span class="text-2xl font-bold">{{ syncStatus().pending }}</span>
+            </div>
+            <div class="text-sm font-semibold mt-2">En Attente</div>
+          </div>
+          <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-lg">
+            <div class="flex items-center justify-between">
+              <svg class="w-8 h-8 opacity-80 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              <span class="text-2xl font-bold">{{ syncStatus().syncing }}</span>
+            </div>
+            <div class="text-sm font-semibold mt-2">En Sync</div>
+          </div>
+          <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-4 text-white shadow-lg">
+            <div class="flex items-center justify-between">
+              <svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span class="text-2xl font-bold">{{ syncStatus().synced }}</span>
+            </div>
+            <div class="text-sm font-semibold mt-2">Synchronisées</div>
+          </div>
+          <div class="bg-gradient-to-br from-red-500 to-rose-600 rounded-xl p-4 text-white shadow-lg">
+            <div class="flex items-center justify-between">
+              <svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span class="text-2xl font-bold">{{ syncStatus().failed }}</span>
+            </div>
+            <div class="text-sm font-semibold mt-2">Échouées</div>
+          </div>
+        </div>
+
+        <!-- Actions sync -->
+        <div class="flex gap-3">
+          <button (click)="syncToCentral()" [disabled]="isSyncing() || syncStatus().pending === 0"
+            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center space-x-2">
+            <svg class="w-5 h-5" [class.animate-spin]="isSyncing()" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>{{ isSyncing() ? 'Synchronisation...' : 'Synchroniser' }}</span>
+          </button>
+          <button (click)="retryFailed()" [disabled]="isRetrying() || syncStatus().failed === 0"
+            class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50">
+            {{ isRetrying() ? 'Nouvel essai...' : 'Réessayer' }}
+          </button>
+        </div>
+
+        <!-- Table des ventes -->
+        <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+          <div class="px-6 py-4 bg-slate-50 border-b border-slate-200">
+            <h3 class="text-lg font-bold text-slate-900">Historique des Ventes</h3>
+          </div>
+          @if (isLoading()) {
+            <div class="p-12 text-center">
+              <div class="inline-block w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+              <p class="mt-4 text-slate-600">Chargement...</p>
+            </div>
+          } @else if (sales().length > 0) {
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-700 uppercase">Référence</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-700 uppercase">Client</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-700 uppercase">Montant</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-700 uppercase">Paiement</th>
+                    <th class="px-6 py-3 text-left text-xs font-bold text-slate-700 uppercase">Date</th>
+                    <th class="px-6 py-3 text-right text-xs font-bold text-slate-700 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  @for (sale of sales(); track trackBySaleId($index, sale)) {
+                    <tr class="hover:bg-slate-50 transition-colors">
+                      <td class="px-6 py-4 font-semibold text-slate-900">{{ sale.reference }}</td>
+                      <td class="px-6 py-4 text-sm text-slate-600">{{ getClientDisplay(sale) }}</td>
+                      <td class="px-6 py-4 font-bold text-emerald-600">{{ formatCurrency(sale.total_amount) }}</td>
+                      <td class="px-6 py-4">
+                        <span [class]="'px-3 py-1 rounded-full text-xs font-bold bg-' + getPaymentMethodColor(sale.payment_method) + '-100 text-' + getPaymentMethodColor(sale.payment_method) + '-700'">
+                          {{ getPaymentMethodIcon(sale.payment_method) }} {{ getPaymentMethodLabel(sale.payment_method) }}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 text-sm text-slate-600">{{ sale.created_at | date: 'dd/MM/yyyy HH:mm' }}</td>
+                      <td class="px-6 py-4 text-right">
+                        <button (click)="deleteSale(sale)" class="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors">
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+            @if (totalPages() > 1) {
+              <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <div class="text-sm text-slate-600">Page {{ currentPage() }} sur {{ totalPages() }}</div>
+                <div class="flex gap-2">
+                  <button (click)="previousPage()" [disabled]="currentPage() === 1" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50">Précédent</button>
+                  <button (click)="nextPage()" [disabled]="currentPage() === totalPages()" class="px-4 py-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50">Suivant</button>
+                </div>
+              </div>
+            }
+          } @else {
+            <div class="p-12 text-center text-slate-500">
+              <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <p>Aucune vente enregistrée</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ══ VUE LOGS ════════════════════════════════════════════════════════════ -->
+    @if (activeView() === 'logs') {
+      <div class="space-y-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl p-4 text-white shadow-lg"><div class="flex items-center justify-between"><svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-2xl font-bold">{{ syncStatus().pending }}</span></div><div class="text-sm font-semibold mt-2">En Attente</div></div>
+          <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-lg"><div class="flex items-center justify-between"><svg class="w-8 h-8 opacity-80 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg><span class="text-2xl font-bold">{{ syncStatus().syncing }}</span></div><div class="text-sm font-semibold mt-2">En Sync</div></div>
+          <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-4 text-white shadow-lg"><div class="flex items-center justify-between"><svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-2xl font-bold">{{ syncStatus().synced }}</span></div><div class="text-sm font-semibold mt-2">Synchronisées</div></div>
+          <div class="bg-gradient-to-br from-red-500 to-rose-600 rounded-xl p-4 text-white shadow-lg"><div class="flex items-center justify-between"><svg class="w-8 h-8 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="text-2xl font-bold">{{ syncStatus().failed }}</span></div><div class="text-sm font-semibold mt-2">Échouées</div></div>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button (click)="syncToCentral()" [disabled]="isSyncing() || syncStatus().pending === 0" class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-lg transition-all disabled:opacity-50 flex items-center space-x-2">
+            <svg class="w-5 h-5" [class.animate-spin]="isSyncing()" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>{{ isSyncing() ? 'Synchronisation...' : 'Synchroniser vers Central' }}</span>
+          </button>
+          <button (click)="retryFailed()" [disabled]="isRetrying() || syncStatus().failed === 0" class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg shadow-lg transition-all disabled:opacity-50">{{ isRetrying() ? 'Nouvel essai...' : 'Réessayer Échouées' }}</button>
+          <button (click)="syncUsers()" [disabled]="isSyncingUsers()" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg shadow-lg transition-all disabled:opacity-50 flex items-center space-x-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            <span>{{ isSyncingUsers() ? 'Sync Users...' : 'Synchroniser Utilisateurs' }}</span>
+          </button>
+        </div>
+
+        <!-- Filtres -->
+        <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-4">
+          <div class="flex flex-wrap items-end gap-4">
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-sm font-semibold text-slate-700 mb-2">Type d'entité</label>
+              <select [(ngModel)]="logFilterEntityType" class="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-purple-500 outline-none bg-white">
+                <option value="">Tous</option>
+                <option value="sale">Ventes</option>
+                <option value="product">Produits</option>
+                <option value="client">Clients</option>
+                <option value="user">Utilisateurs</option>
+              </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+              <label class="block text-sm font-semibold text-slate-700 mb-2">Statut</label>
+              <select [(ngModel)]="logFilterStatus" class="w-full px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-purple-500 outline-none bg-white">
+                <option value="">Tous</option>
+                <option value="pending">En attente</option>
+                <option value="syncing">En cours</option>
+                <option value="synced">Synchronisé</option>
+                <option value="failed">Échoué</option>
+              </select>
+            </div>
+            <div class="flex gap-2">
+              <button (click)="applyLogFilters()" class="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-lg transition-all">Filtrer</button>
+              <button (click)="clearLogFilters()" class="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-all">Réinitialiser</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table logs -->
+        <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+          <div class="px-6 py-4 bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Journal des Activités</span>
+            </h3>
+            <span class="text-sm font-semibold text-purple-600">{{ syncHistoryTotal() }} événement(s)</span>
+          </div>
+
+          @if (syncHistory().length > 0) {
+            <div class="divide-y divide-slate-100">
+              @for (event of syncHistory(); track trackByEventId($index, event)) {
+                <div class="p-4 hover:bg-slate-50 transition-colors">
+                  <div class="flex items-center space-x-3 mb-2">
+                    <span [class]="'px-3 py-1 rounded-full text-xs font-bold bg-' + getActionColor(event.action) + '-100 text-' + getActionColor(event.action) + '-700'">{{ getActionLabel(event.action) }}</span>
+                    <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">{{ event.entity_type }}</span>
+                    <span [class]="'px-3 py-1 rounded-full text-xs font-bold bg-' + getStatusColor(event.status) + '-100 text-' + getStatusColor(event.status) + '-700'">{{ getStatusLabel(event.status) }}</span>
+                  </div>
+                  <div class="text-sm text-slate-600 space-y-1">
+                    <div><strong>ID:</strong> {{ event.entity_id }} · <strong>Date:</strong> {{ event.created_at | date: 'dd/MM/yyyy HH:mm:ss' }}</div>
+                    @if (parseSyncEventData(event.data); as data) {
+                      <div class="mt-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        @if (event.entity_type === 'sale') {
+                          <div class="grid grid-cols-2 gap-2 text-xs">
+                            <div><strong>Réf :</strong> {{ data.reference }}</div>
+                            <div><strong>Montant :</strong> {{ formatCurrency(data.total_amount) }}</div>
+                            <div><strong>Paiement :</strong> {{ data.payment_method }}</div>
+                            <div><strong>Statut :</strong> {{ data.status }}</div>
+                            @if (data.client_name) { <div class="col-span-2"><strong>Client :</strong> {{ data.client_name }}</div> }
+                            @if (data.note) { <div class="col-span-2"><strong>Note :</strong> {{ data.note }}</div> }
+                          </div>
+                        } @else {
+                          <pre class="text-xs overflow-auto max-h-32">{{ data | json }}</pre>
+                        }
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="p-12 text-center text-slate-500">
+              <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <p>Aucun événement trouvé</p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>

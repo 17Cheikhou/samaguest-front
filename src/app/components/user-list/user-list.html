@@ -1,0 +1,373 @@
+<div class="p-6 bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen">
+  <!-- En-tête -->
+  <div class="mb-8">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+          <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Gestion des Utilisateurs
+          </span>
+          <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-full">
+            {{ stats().total }} utilisateurs
+          </span>
+        </h1>
+        <p class="text-gray-600">Gérez et consultez tous les utilisateurs de votre application</p>
+      </div>
+      
+      <div class="flex gap-3">
+        <button (click)="exportToCSV()" 
+                class="px-4 py-2 bg-green-100 hover:bg-green-200 text-green-800 
+                       rounded-lg font-medium transition-colors duration-200 flex items-center gap-2">
+          <i class="fas fa-file-export"></i>
+          Exporter CSV
+        </button>
+        <button (click)="refreshData()" 
+                [disabled]="loading()"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white 
+                       rounded-lg font-medium transition-colors duration-200 
+                       disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+          <i class="fas fa-sync" [class.animate-spin]="loading()"></i>
+          Rafraîchir
+        </button>
+      </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm font-medium">Utilisateurs actifs</p>
+            <p class="text-2xl font-bold text-gray-900 mt-2">{{ stats().activeToday }}</p>
+          </div>
+          <div class="p-3 bg-green-100 rounded-lg">
+            <i class="fas fa-user-check text-green-600 text-xl"></i>
+          </div>
+        </div>
+        <p class="text-gray-500 text-sm mt-3">Aujourd'hui</p>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow" *ngIf="role()=='superadmin'">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm font-medium">Avec pharmacie</p>
+            <p class="text-2xl font-bold text-gray-900 mt-2">{{ stats().withPharmacy }}</p>
+          </div>
+          <div class="p-3 bg-blue-100 rounded-lg">
+            <i class="fas fa-clinic-medical text-blue-600 text-xl"></i>
+          </div>
+        </div>
+        <p class="text-gray-500 text-sm mt-3">Associés à une pharmacie</p>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-200 hover:shadow-xl transition-shadow" >
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-gray-500 text-sm font-medium">A Remplir</p>
+            <p class="text-2xl font-bold text-gray-900 mt-2">{{ stats().total - stats().withPharmacy }}</p>
+          </div>
+          <div class="p-3 bg-yellow-100 rounded-lg">
+            <i class="fas fa-user text-yellow-600 text-xl"></i>
+          </div>
+        </div>
+        <p class="text-gray-500 text-sm mt-3">En réflexion</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre de contrôle -->
+  <div class="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-200">
+    <div class="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+      <!-- Recherche -->
+      <div class="flex-1 w-full md:w-auto">
+        <div class="relative">
+          <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+          <input 
+            type="text" 
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchChange($event)"
+            placeholder="Rechercher par nom, email ou ID..."
+            class="w-full md:w-96 pl-12 pr-4 py-3 border border-gray-300 rounded-lg 
+                   focus:border-blue-500 focus:ring-2 focus:ring-blue-200 
+                   transition-all duration-200 outline-none"
+          >
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <div class="flex flex-wrap gap-3">
+        <select [(ngModel)]="selectedRole" (change)="applyFilters()"
+                class="px-4 py-3 border border-gray-300 rounded-lg 
+                       focus:border-blue-500 focus:ring-2 focus:ring-blue-200 
+                       transition-all duration-200 outline-none">
+          <option value="all">Tous les rôles</option>
+          <option value="admin">Administrateur</option>
+          <option value="pharmacist">Pharmacien</option>
+          <option value="user">Utilisateur</option>
+        </select>
+
+        <select [(ngModel)]="itemsPerPage" (change)="onItemsPerPageChange($any($event.target).value)"
+                class="px-4 py-3 border border-gray-300 rounded-lg 
+                       focus:border-blue-500 focus:ring-2 focus:ring-blue-200 
+                       transition-all duration-200 outline-none">
+          <option value="5">5 par page</option>
+          <option value="10">10 par page</option>
+          <option value="25">25 par page</option>
+          <option value="50">50 par page</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div *ngIf="successMessage()" 
+       class="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl 
+              animate-fade-in">
+    <div class="flex items-center gap-3">
+      <i class="fas fa-check-circle text-green-600"></i>
+      <p class="text-green-800">{{ successMessage() }}</p>
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage()" 
+       class="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl 
+              animate-fade-in">
+    <div class="flex items-center gap-3">
+      <i class="fas fa-exclamation-circle text-red-600"></i>
+      <div>
+        <p class="text-red-800 font-medium mb-1">Erreur de chargement</p>
+        <p class="text-red-700">{{ errorMessage() }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau -->
+  <div class="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
+    <!-- En-tête tableau -->
+    <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+      <div class="flex justify-between items-center">
+        <p class="font-medium text-gray-700">
+          {{ usersCount() }} utilisateur(s) trouvé(s)
+        </p>
+        <p class="text-sm text-gray-500">
+          Page {{ currentPage() }} sur {{ totalPages() }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Chargement -->
+    <div *ngIf="loading()" class="p-12">
+      <div class="flex flex-col items-center justify-center gap-4">
+        <div class="relative">
+          <div class="w-16 h-16 border-4 border-blue-200 border-t-blue-600 
+                      rounded-full animate-spin"></div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <i class="fas fa-users text-blue-600 text-xl"></i>
+          </div>
+        </div>
+        <p class="text-gray-600 font-medium">Chargement des utilisateurs...</p>
+      </div>
+    </div>
+
+    <!-- Tableau des données -->
+    <div *ngIf="!loading()" class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th (click)="onSort('id')" 
+                class="px-6 py-4 text-left text-xs font-medium text-gray-700 
+                       uppercase tracking-wider cursor-pointer hover:bg-gray-100 
+                       transition-colors group">
+              <div class="flex items-center gap-2">
+                ID
+                <span class="text-gray-400 group-hover:text-gray-600">
+                  {{ getSortIcon('id') }}
+                </span>
+              </div>
+            </th>
+            <th (click)="onSort('name')" 
+                class="px-6 py-4 text-left text-xs font-medium text-gray-700 
+                       uppercase tracking-wider cursor-pointer hover:bg-gray-100 
+                       transition-colors group">
+              <div class="flex items-center gap-2">
+                Utilisateur
+                <span class="text-gray-400 group-hover:text-gray-600">
+                  {{ getSortIcon('name') }}
+                </span>
+              </div>
+            </th>
+            <th (click)="onSort('email')" 
+                class="px-6 py-4 text-left text-xs font-medium text-gray-700 
+                       uppercase tracking-wider cursor-pointer hover:bg-gray-100 
+                       transition-colors group">
+              <div class="flex items-center gap-2">
+                Email
+                <span class="text-gray-400 group-hover:text-gray-600">
+                  {{ getSortIcon('email') }}
+                </span>
+              </div>
+            </th>
+            <th *ngIf="role()=='superadmin'"  class="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+              Pharmacie
+            </th>
+            <th (click)="onSort('created_at')" 
+                class="px-6 py-4 text-left text-xs font-medium text-gray-700 
+                       uppercase tracking-wider cursor-pointer hover:bg-gray-100 
+                       transition-colors group">
+              <div class="flex items-center gap-2">
+                Inscription
+                <span class="text-gray-400 group-hover:text-gray-600">
+                  {{ getSortIcon('created_at') }}
+                </span>
+              </div>
+            </th>
+            <th (click)="onSort('last_visit_at')" 
+                class="px-6 py-4 text-left text-xs font-medium text-gray-700 
+                       uppercase tracking-wider cursor-pointer hover:bg-gray-100 
+                       transition-colors group">
+              <div class="flex items-center gap-2">
+                Dernière visite
+                <span class="text-gray-400 group-hover:text-gray-600">
+                  {{ getSortIcon('last_visit_at') }}
+                </span>
+              </div>
+            </th>
+            <th class="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200">
+          <tr *ngFor="let user of paginatedUsers()" 
+              class="hover:bg-gray-50 transition-colors">
+            <td class="px-6 py-4 whitespace-nowrap">
+              <span class="inline-flex items-center px-3 py-1 rounded-full 
+                           text-sm font-medium bg-blue-100 text-blue-800">
+                #{{ user.id }}
+              </span>
+            </td>
+            <td class="px-6 py-4">
+              <div class="flex items-center">
+                <div class="flex-shrink-0 h-10 w-10 bg-gradient-to-r 
+                            from-blue-500 to-purple-500 rounded-full 
+                            flex items-center justify-center text-white 
+                            font-bold mr-3">
+                  {{ user.name.charAt(0).toUpperCase() }}
+                </div>
+                <div>
+                  <div class="font-medium text-gray-900">{{ user.name }}</div>
+                  <div class="text-sm text-gray-500">
+                    <span class="px-2 py-1 text-xs rounded-full bg-gray-100">
+                      {{ user.role || 'Utilisateur' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-gray-900">{{ user.email }}</div>
+              <div class="text-sm text-gray-500">ID: {{ user.external_id || 'N/A' }}</div>
+            </td>
+            <td class="px-6 py-4" *ngIf="role()=='superadmin'">
+              <div *ngIf="user.pharmacy_id"
+                   class="flex items-center gap-2">
+                <i class="fas fa-clinic-medical text-green-600"></i>
+                <span class="font-medium text-gray-900">{{ getPharmacyName(user.pharmacy_id) }}</span>
+              </div>
+              <div *ngIf="!user.pharmacy_id" 
+                   class="text-gray-400 italic">
+                Non associé
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-gray-900">{{ formatDate(user.created_at) }}</div>
+              <div class="text-sm text-gray-500">
+                {{ user.created_at | date: 'dd/MM/yyyy HH:mm' }}
+              </div>
+            </td>
+            <td class="px-6 py-4">
+              <div class="text-gray-900">{{ formatDate(user.last_visit_at) }}</div>
+              <div class="text-sm text-gray-500" *ngIf="user.last_visit_at">
+                {{ user.last_visit_at | date: 'dd/MM/yyyy HH:mm' }}
+              </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+              <div class="flex gap-2">
+                <button (click)="viewUserProfile(user.id)"
+                        class="px-4 py-2 text-sm font-medium text-blue-600 
+                               hover:text-blue-800 hover:bg-blue-50 
+                               rounded-lg transition-colors duration-200 
+                               flex items-center gap-2">
+                  <i class="fas fa-eye"></i>
+                  Voir
+                </button>
+              </div>
+            </td>
+          </tr>
+          
+          <!-- Message vide -->
+          <tr *ngIf="paginatedUsers().length === 0 && !loading()">
+            <td colspan="7" class="px-6 py-12 text-center">
+              <div class="flex flex-col items-center justify-center gap-4">
+                <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+                  <i class="fas fa-users text-gray-400 text-2xl"></i>
+                </div>
+                <div>
+                  <p class="text-gray-900 font-medium text-lg mb-2">Aucun utilisateur trouvé</p>
+                  <p class="text-gray-600 max-w-md">
+                    Aucun utilisateur ne correspond à vos critères de recherche.
+                    Essayez de modifier vos filtres ou votre terme de recherche.
+                  </p>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div *ngIf="!loading() && totalPages() > 1" 
+         class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="text-sm text-gray-700">
+          Affichage de <span class="font-medium">{{ (currentPage() - 1) * itemsPerPage() + 1 }}</span>
+          à <span class="font-medium"></span>
+          sur <span class="font-medium">{{ usersCount() }}</span> utilisateurs
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <button (click)="changePage(currentPage() - 1)"
+                  [disabled]="currentPage() === 1"
+                  class="px-3 py-2 rounded-lg border border-gray-300 
+                         hover:bg-gray-100 disabled:opacity-50 
+                         disabled:cursor-not-allowed transition-colors">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          
+          <div class="flex items-center gap-1">
+            <button *ngFor="let page of getPageNumbers()"
+                    (click)="changePage(page)"
+                    [class]="page === currentPage() 
+                      ? 'px-4 py-2 bg-blue-600 text-white rounded-lg font-medium'
+                      : 'px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg'">
+              {{ page }}
+            </button>
+            <span *ngIf="totalPages() > 5 && currentPage() < totalPages() - 2" 
+                  class="px-2 text-gray-500">...</span>
+          </div>
+          
+          <button (click)="changePage(currentPage() + 1)"
+                  [disabled]="currentPage() === totalPages()"
+                  class="px-3 py-2 rounded-lg border border-gray-300 
+                         hover:bg-gray-100 disabled:opacity-50 
+                         disabled:cursor-not-allowed transition-colors">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal removed — profile page used for details -->

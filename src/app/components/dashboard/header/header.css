@@ -1,0 +1,156 @@
+
+/* Animation pour le menu déroulant */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* États du menu déroulant */
+.profile-menu-container > div {
+  pointer-events: none;
+}
+
+.profile-menu-container > div.visible {
+  pointer-events: auto;
+}
+
+/* Animation de rotation pour la flèche */
+.rotate-180 {
+  transform: rotate(180deg);
+}
+
+/* Animation du badge de notification */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+.animate-ping {
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Animation du badge en ligne */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Effet de backdrop blur pour le header */
+.backdrop-blur-xl {
+  backdrop-filter: blur(24px);
+}
+
+/* Amélioration des transitions */
+* {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Focus visible uniquement au clavier */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Animation des boutons */
+button:active {
+  transform: scale(0.95);
+}
+
+/* Effet hover sur les items du menu */
+.group:hover .group-hover\:scale-110 {
+  transform: scale(1.1);
+}
+
+/* Gradient animé pour le logo */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Amélioration de la lisibilité sur mobile */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+/* Assurer que le header reste au-dessus de tout */
+nav {
+  position: relative;
+  z-index: 100;
+}
+
+/* Le menu déroulant doit être au-dessus du header */
+.profile-menu-container > div {
+  position: absolute;
+  z-index: 200;
+}
+
+/* Style pour le backdrop quand le menu est ouvert (optionnel) */
+.profile-menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.1);
+  z-index: 90;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .profile-menu-container > div {
+    right: -1rem;
+    width: calc(100vw - 2rem);
+    max-width: 20rem;
+  }
+}
+
+/* Smooth scroll behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar pour le menu si nécessaire */
+.profile-menu-container > div::-webkit-scrollbar {
+  width: 6px;
+}
+
+.profile-menu-container > div::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.profile-menu-container > div::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.profile-menu-container > div::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

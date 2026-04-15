@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, HostListener } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, HostListener } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { UserService } from '../../../core/services/user.service';
@@ -10,7 +10,7 @@ import { UserService } from '../../../core/services/user.service';
   standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive]
 })
-export class Sidebar implements OnInit {
+export class Sidebar implements OnInit, OnDestroy {
   private userService = inject(UserService);
   
   // Exposer le rôle et les informations utilisateur
@@ -25,6 +25,11 @@ export class Sidebar implements OnInit {
 
   // État pour le menu mobile
   mobileMenuOpen = signal(false);
+
+  private toggleSidebarHandler = () => {
+    this.mobileMenuOpen.update(v => !v);
+    this.expandedSections.set({ gestion: false, operations: false });
+  };
 
   // États des sous-menus déroulants
   expandedSections = signal<{[key: string]: boolean}>({
@@ -51,16 +56,12 @@ export class Sidebar implements OnInit {
     if (!this.user()) {
       this.userService.fetchProfile().subscribe();
     }
-      // Écouter l'événement global
-  window.addEventListener('toggle-sidebar', () => {
-    this.mobileMenuOpen.update(value => !value);
-    this.expandedSections.set({ gestion: false, operations: false });
-  });
+    window.addEventListener('toggle-sidebar', this.toggleSidebarHandler);
   }
-ngOnDestroy(): void {
-  // Nettoyer l'écouteur d'événements
-  window.removeEventListener('toggle-sidebar', () => {});
-}
+
+  ngOnDestroy(): void {
+    window.removeEventListener('toggle-sidebar', this.toggleSidebarHandler);
+  }
   closeMobileMenu(): void {
     this.mobileMenuOpen.set(false);
   }
@@ -83,6 +84,13 @@ ngOnDestroy(): void {
         icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
         path: '/',
         roles: ['superadmin', 'admin', 'pharmacist', 'manager', 'cashier']
+      },
+      {
+        id: 'users',
+        title: 'Utilisateurs',
+        icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-2a4 4 0 00-4-4H9a4 4 0 00-4 4v2',
+        path: '/users',
+        roles: ['superadmin', 'admin']
       },
       {
         id: 'gestion',
@@ -127,7 +135,14 @@ ngOnDestroy(): void {
       ],
       operations: [
         {
-          path: '/tenant/vente',
+          path: '/sales',
+          icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+          label: 'Gestion des Ventes',
+          description: 'Ventes et synchronisation',
+          roles: ['cashier', 'admin', 'pharmacist']
+        },
+        {
+          path: '/tenant/sales',
           icon: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
           label: 'Vente au comptoir',
           description: 'Transactions clients',
@@ -141,7 +156,14 @@ ngOnDestroy(): void {
           roles: ['pharmacist', 'admin']
         },
         {
-          path: '/tenant/clients',
+          path: '/clients',
+          icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
+          label: 'Gestion des Clients',
+          description: 'Clients et types',
+          roles: ['admin', 'pharmacist', 'cashier']
+        },
+        {
+          path: '/tenant/customers',
           icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
           label: 'Fichier clients',
           description: 'Patients et historiques',

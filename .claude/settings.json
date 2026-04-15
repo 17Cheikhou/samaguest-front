@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan tinker '--execute=:*)",
+      "Bash(php artisan:*)",
+      "Read(//c/Users/lenovo/.claude/projects/d--Project-Save-frontend-Smaguest/memory/**)",
+      "Read(//c/Users/lenovo/.claude/projects/d--Project-Save-frontend-Smaguest/**)"
+    ]
+  }
+}
