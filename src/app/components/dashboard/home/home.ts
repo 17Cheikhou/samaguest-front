@@ -4,10 +4,10 @@ import { DashboardService } from '../../../core/services/dashboard.service';
 import { UserService } from '../../../core/services/user.service';
 import {
   Chart, CategoryScale, LinearScale, PointElement, LineElement,
-  Filler, Tooltip, Legend
+  LineController, Filler, Tooltip, Legend
 } from 'chart.js';
 
-Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
+Chart.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Filler, Tooltip, Legend);
 
 @Component({
   selector: 'app-home',
@@ -35,7 +35,10 @@ export class Home implements OnInit, AfterViewInit, OnDestroy {
     this.dashboardService.fetch().subscribe(d => {
       if (d) {
         this.weeklyData = d.weekly_sales;
-        if (this.viewReady) this.renderChart();
+        if (this.viewReady) {
+          this.cdr.detectChanges(); // force le DOM à rendre le canvas avant de dessiner
+          this.renderChart();
+        }
       }
     });
   }
