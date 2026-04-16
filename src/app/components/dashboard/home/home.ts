@@ -1,125 +1,119 @@
-import { Component, inject, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, ElementRef, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DashboardService } from '../../../core/services/dashboard.service';
 import { UserService } from '../../../core/services/user.service';
-import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration, ChartDataset, ChartType } from 'chart.js';
+import {
+  Chart, CategoryScale, LinearScale, PointElement, LineElement,
+  Filler, Tooltip, Legend
+} from 'chart.js';
+
+Chart.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
 @Component({
   selector: 'app-home',
   templateUrl: './home.html',
   styleUrls: ['./home.css'],
   standalone: true,
-  imports: [CommonModule, BaseChartDirective]
+  imports: [CommonModule]
 })
-export class Home implements OnInit {
-  private dashboardService = inject(DashboardService);
-  private userService = inject(UserService);
-  
-  // Signals exposés au template
-  summary = this.dashboardService.summary;
+export class Home implements OnInit, AfterViewInit, OnDestroy {
+  public  dashboardService = inject(DashboardService);
+  private userService      = inject(UserService);
+  private cdr              = inject(ChangeDetectorRef);
+
+  data    = this.dashboardService.data;
   loading = this.dashboardService.loading;
-  user = this.userService.user;
-  
-  // Référence au chart
-  @ViewChild(BaseChartDirective) chart?: BaseChartDirective;
+  error   = this.dashboardService.error;
+  user    = this.userService.user;
 
-  // Configuration du graphique
-  public lineChartData: ChartConfiguration['data'] = {
-    datasets: [
-      {
-        data: [],
-        label: 'Ventes (€)',
-        backgroundColor: 'rgba(10, 92, 140, 0.1)',
-        borderColor: '#0a5c8c',
-        pointBackgroundColor: '#0a5c8c',
-        pointBorderColor: '#fff',
-        pointHoverBackgroundColor: '#fff',
-        pointHoverBorderColor: '#0a5c8c',
-        fill: 'origin',
-        tension: 0.4
-      }
-    ],
-    labels: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-  };
-
-  public lineChartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        display: false
-      },
-      tooltip: {
-        mode: 'index',
-        intersect: false,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        titleColor: '#0a5c8c',
-        bodyColor: '#666',
-        borderColor: '#e5e7eb',
-        borderWidth: 1,
-        padding: 12,
-        boxPadding: 6
-      }
-    },
-    scales: {
-      x: {
-        grid: {
-          display: false
-        },
-        ticks: {
-          color: '#666'
-        }
-      },
-      y: {
-        beginAtZero: true,
-        grid: {
-          color: 'rgba(0, 0, 0, 0.05)'
-        },
-        ticks: {
-          color: '#666',
-          callback: (value) => `${value}€`
-        }
-      }
-    }
-  };
-
-  public lineChartType: ChartType = 'line';
+  @ViewChild('chartCanvas') chartCanvas!: ElementRef<HTMLCanvasElement>;
+  private chartInstance: Chart | null = null;
+  private weeklyData: { day: string; total: number }[] = [];
+  private viewReady = false;
 
   ngOnInit(): void {
-    // Charger les données du dashboard
-    this.dashboardService.fetchDashboardData().subscribe(data => {
-      this.updateChartData(data.weeklySales);
+    this.dashboardService.fetch().subscribe(d => {
+      if (d) {
+        this.weeklyData = d.weekly_sales;
+        if (this.viewReady) this.renderChart();
+      }
     });
   }
 
-  private updateChartData(weeklySales: { day: string; amount: number }[]): void {
-    if (weeklySales && weeklySales.length > 0) {
-      this.lineChartData.datasets[0].data = weeklySales.map(sale => sale.amount);
-      this.chart?.update();
-    }
+  ngAfterViewInit(): void {
+    this.viewReady = true;
+    if (this.weeklyData.length) this.renderChart();
   }
 
-  refreshData(): void {
-    this.dashboardService.refresh();
+  ngOnDestroy(): void {
+    this.chartInstance?.destroy();
   }
 
-  // Méthode pour obtenir les classes CSS selon le rôle
-  getUserRoleClass(): string {
-    const role = this.user()?.role;
-    switch(role) {
-      case 'superadmin':
-        return 'bg-purple-100 text-purple-800';
-      case 'admin':
-        return 'bg-red-100 text-red-800';
-      case 'pharmacist':
-        return 'bg-blue-100 text-blue-800';
-      case 'manager':
-        return 'bg-green-100 text-green-800';
-      case 'cashier':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  private renderChart(): void {
+    if (!this.chartCanvas) return;
+    this.chartInstance?.destroy();
+    this.chartInstance = new Chart(this.chartCanvas.nativeElement, {
+      type: 'line',
+      data: {
+        labels: this.weeklyData.map(w => w.day),
+        datasets: [{
+          label: 'Ventes',
+          data: this.weeklyData.map(w => w.total),
+          backgroundColor: 'rgba(59,130,246,0.1)',
+          borderColor: '#3b82f6',
+          pointBackgroundColor: '#3b82f6',
+          pointBorderColor: '#fff',
+          fill: true,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: ctx => `  ${new Intl.NumberFormat('fr-FR').format(ctx.parsed.y ?? 0)} FCFA`
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#6b7280' } },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0,0,0,0.04)' },
+            ticks: {
+              color: '#6b7280',
+              callback: v => `${new Intl.NumberFormat('fr-FR', { notation: 'compact' }).format(+v)}`
+            }
+          }
+        }
+      }
+    });
+  }
+
+  getPaymentIcon(method: string): string {
+    return ({ cash: '💵', wave: '📱', card: '💳', check: '🏦' } as any)[method] ?? '💰';
+  }
+
+  getPaymentLabel(method: string): string {
+    return ({ cash: 'Espèces', wave: 'Wave', card: 'Carte', check: 'Chèque' } as any)[method] ?? method;
+  }
+
+  getClientName(sale: any): string {
+    if (sale.client) return `${sale.client.first_name} ${sale.client.last_name}`;
+    return sale.client_name || 'Client passager';
+  }
+
+  getStockClass(item: any): string {
+    if (item.global_stock === 0) return 'text-red-600 bg-red-50';
+    return 'text-amber-600 bg-amber-50';
+  }
+
+  formatCurrency(v: number): string {
+    return this.dashboardService.formatCurrency(v);
   }
 }

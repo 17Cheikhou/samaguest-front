@@ -1,48 +1,206 @@
-<div *ngIf="loading()" class="text-center py-8">Chargement…</div>
+<!-- Chargement -->
+@if (loading()) {
+  <div class="flex items-center justify-center h-64">
+    <div class="flex flex-col items-center gap-3 text-slate-400">
+      <svg class="w-8 h-8 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+      <span class="text-sm">Chargement du tableau de bord…</span>
+    </div>
+  </div>
+}
 
-<div *ngIf="!loading()">
-  <!-- summary cards -->
+<!-- Erreur -->
+@if (!loading() && error()) {
+  <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center gap-3">
+    <svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <span class="text-sm text-red-700">{{ error() }}</span>
+    <button (click)="dashboardService.refresh()" class="ml-auto text-xs text-red-600 underline">Réessayer</button>
+  </div>
+}
+
+@if (!loading() && data()) {
+  <!-- En-tête -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Tableau de bord</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Bonjour, {{ user()?.name || 'Utilisateur' }}</p>
+    </div>
+    <button
+      (click)="dashboardService.refresh()"
+      class="flex items-center gap-2 px-4 py-2 text-sm bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-slate-600">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      Actualiser
+    </button>
+  </div>
+
+  <!-- KPIs -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white p-4 rounded-lg shadow">
-      <div class="text-sm text-gray-500">Pharmacies</div>
-      <div class="text-2xl font-bold">{{ summary()?.pharmacies }}</div>
+
+    <!-- Ventes du jour -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-slate-500">Ventes aujourd'hui</span>
+        <div class="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-2xl font-bold text-slate-800">{{ data()!.today.sales_count }}</div>
+      <div class="text-sm text-slate-500 mt-1">{{ formatCurrency(data()!.today.sales_total) }}</div>
     </div>
 
-    <div class="bg-white p-4 rounded-lg shadow">
-      <div class="text-sm text-gray-500">Utilisateurs</div>
-      <div class="text-2xl font-bold">{{ summary()?.users }}</div>
+    <!-- Produits -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-slate-500">Produits</span>
+        <div class="w-9 h-9 bg-emerald-100 rounded-xl flex items-center justify-center">
+          <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-2xl font-bold text-slate-800">{{ data()!.stock.total }}</div>
+      <div class="text-sm text-slate-500 mt-1">{{ data()!.stock.out_of_stock }} en rupture</div>
     </div>
 
-    <div class="bg-white p-4 rounded-lg shadow">
-      <div class="text-sm text-gray-500">Ventes aujourd'hui</div>
-      <div class="text-2xl font-bold">{{ summary()?.salesToday | number }}</div>
+    <!-- Stock bas -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm"
+         [class.border-amber-200]="data()!.stock.low_stock > 0"
+         [class.bg-amber-50]="data()!.stock.low_stock > 0">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-slate-500">Stock bas</span>
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center"
+             [class]="data()!.stock.low_stock > 0 ? 'bg-amber-100' : 'bg-slate-100'">
+          <svg class="w-5 h-5" [class]="data()!.stock.low_stock > 0 ? 'text-amber-600' : 'text-slate-400'"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-2xl font-bold" [class]="data()!.stock.low_stock > 0 ? 'text-amber-700' : 'text-slate-800'">
+        {{ data()!.stock.low_stock }}
+      </div>
+      <div class="text-sm text-slate-500 mt-1">produits sous seuil</div>
     </div>
 
-    <div class="bg-white p-4 rounded-lg shadow">
-      <div class="text-sm text-gray-500">Produits bas stock</div>
-      <div class="text-2xl font-bold">{{ summary()?.lowStockCount }}</div>
+    <!-- Clients -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-sm font-medium text-slate-500">Clients</span>
+        <div class="w-9 h-9 bg-purple-100 rounded-xl flex items-center justify-center">
+          <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="text-2xl font-bold text-slate-800">{{ data()!.clients.total }}</div>
+      <div class="text-sm text-slate-500 mt-1">+{{ data()!.clients.new_this_week }} cette semaine</div>
     </div>
+
   </div>
 
-  <!-- charts + recent activities -->
+  <!-- Graphique + alertes stock -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+
+    <!-- Graphique 7 jours -->
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-slate-700">Ventes — 7 derniers jours</h2>
+        <span class="text-xs text-slate-400">FCFA</span>
+      </div>
+      <div style="height: 220px">
+        <canvas #chartCanvas></canvas>
+      </div>
+    </div>
+
+    <!-- Alertes stock bas -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <h2 class="font-semibold text-slate-700 mb-4">Alertes stock</h2>
+      @if (data()!.stock.low_stock_items.length === 0) {
+        <div class="flex flex-col items-center justify-center h-32 text-slate-300 gap-2">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span class="text-sm">Tous les stocks sont OK</span>
+        </div>
+      } @else {
+        <ul class="space-y-3">
+          @for (item of data()!.stock.low_stock_items; track item.id) {
+            <li class="flex items-center justify-between gap-2">
+              <div class="min-w-0">
+                <div class="text-sm font-medium text-slate-700 truncate">{{ item.name }}</div>
+                <div class="text-xs text-slate-400">{{ item.form || '—' }} · seuil {{ item.reorder_level }}</div>
+              </div>
+              <span class="shrink-0 px-2 py-0.5 rounded-full text-xs font-bold"
+                    [class]="item.global_stock === 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'">
+                {{ item.global_stock === 0 ? 'Rupture' : item.global_stock }}
+              </span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+  </div>
+
+  <!-- Ventes récentes + répartition paiements -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="col-span-2 bg-white p-4 rounded-lg shadow">
-      <h3 class="text-lg font-medium mb-4">Ventes (7 jours)</h3>
-      <canvas baseChart
-              [data]="lineChartData"
-              [options]="lineChartOptions"
-              [type]="lineChartType">
-      </canvas>
+
+    <!-- Ventes récentes -->
+    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100">
+        <h2 class="font-semibold text-slate-700">Ventes récentes</h2>
+      </div>
+      @if (data()!.recent_sales.length === 0) {
+        <div class="flex items-center justify-center h-24 text-slate-400 text-sm">Aucune vente pour le moment</div>
+      } @else {
+        <ul class="divide-y divide-slate-50">
+          @for (sale of data()!.recent_sales; track sale.id) {
+            <li class="px-5 py-3 flex items-center justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-sm font-medium text-slate-700 truncate">{{ getClientName(sale) }}</div>
+                <div class="text-xs text-slate-400">{{ sale.reference }}</div>
+              </div>
+              <div class="flex items-center gap-3 shrink-0">
+                <span class="text-sm" title="{{ getPaymentLabel(sale.payment_method) }}">{{ getPaymentIcon(sale.payment_method) }}</span>
+                <span class="text-sm font-semibold text-slate-800">{{ formatCurrency(sale.total_amount) }}</span>
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                      [class]="sale.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'">
+                  {{ sale.status === 'completed' ? 'Clôturée' : 'En attente' }}
+                </span>
+              </div>
+            </li>
+          }
+        </ul>
+      }
     </div>
 
-    <div class="bg-white p-4 rounded-lg shadow">
-      <h3 class="text-lg font-medium mb-3">Activité récente</h3>
-      <ul class="text-sm space-y-2">
-        <li *ngFor="let item of [1,2,3,4]">
-          <div class="text-gray-700">Commande #00{{ item }} reçue</div>
-          <div class="text-xs text-gray-500">il y a {{ item }} heure(s)</div>
-        </li>
-      </ul>
+    <!-- Répartition paiements -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+      <h2 class="font-semibold text-slate-700 mb-4">Paiements — aujourd'hui</h2>
+      @if (data()!.payment_breakdown.length === 0) {
+        <div class="flex items-center justify-center h-24 text-slate-400 text-sm">Aucune vente aujourd'hui</div>
+      } @else {
+        <ul class="space-y-3">
+          @for (p of data()!.payment_breakdown; track p.payment_method) {
+            <li>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-sm text-slate-600">{{ getPaymentIcon(p.payment_method) }} {{ getPaymentLabel(p.payment_method) }}</span>
+                <span class="text-sm font-semibold text-slate-700">{{ p.count }}</span>
+              </div>
+              <div class="text-xs text-slate-400">{{ formatCurrency(p.total) }}</div>
+            </li>
+          }
+        </ul>
+      }
     </div>
+
   </div>
-</div>
+}

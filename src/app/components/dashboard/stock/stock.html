@@ -1,0 +1,324 @@
+<!-- En-tête -->
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800">Gestion des stocks</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Mouvements, ajustements et alertes</p>
+  </div>
+</div>
+
+<!-- Onglets -->
+<div class="flex gap-1 bg-slate-100 p-1 rounded-xl mb-6 w-fit">
+  <button
+    (click)="setTab('movements')"
+    [class]="activeTab() === 'movements'
+      ? 'bg-white text-slate-800 shadow-sm'
+      : 'text-slate-500 hover:text-slate-700'"
+    class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+    Historique
+  </button>
+  <button
+    (click)="setTab('adjust')"
+    [class]="activeTab() === 'adjust'
+      ? 'bg-white text-slate-800 shadow-sm'
+      : 'text-slate-500 hover:text-slate-700'"
+    class="px-4 py-2 text-sm font-medium rounded-lg transition-all">
+    Ajustement
+  </button>
+  <button
+    (click)="setTab('alerts')"
+    [class]="activeTab() === 'alerts'
+      ? 'bg-white text-slate-800 shadow-sm'
+      : 'text-slate-500 hover:text-slate-700'"
+    class="px-4 py-2 text-sm font-medium rounded-lg transition-all relative">
+    Alertes
+    @if (stockService.alerts().length > 0) {
+      <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+        {{ stockService.alerts().length > 9 ? '9+' : stockService.alerts().length }}
+      </span>
+    }
+  </button>
+</div>
+
+<!-- ── ONGLET : Historique ────────────────────────────────────────────────── -->
+@if (activeTab() === 'movements') {
+
+  <!-- Filtres -->
+  <div class="bg-white rounded-2xl border border-slate-100 p-4 mb-4 shadow-sm">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Type</label>
+        <select [(ngModel)]="filterType" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <option value="">Tous</option>
+          <option value="inbound">Entrée</option>
+          <option value="outbound">Sortie</option>
+          <option value="adjustment">Ajustement</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Produit</label>
+        <select [(ngModel)]="filterProductId" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+          <option value="">Tous les produits</option>
+          @for (p of products(); track p.id) {
+            <option [value]="p.id">{{ p.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Du</label>
+        <input type="date" [(ngModel)]="filterFromDate"
+          class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-slate-500 mb-1">Au</label>
+        <input type="date" [(ngModel)]="filterToDate"
+          class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+      </div>
+    </div>
+
+    <div class="flex gap-2 mt-3">
+      <button (click)="loadMovements()"
+        class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+        Filtrer
+      </button>
+      <button (click)="resetFilters()"
+        class="px-4 py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors">
+        Réinitialiser
+      </button>
+    </div>
+  </div>
+
+  <!-- Tableau -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+
+    @if (stockService.loadingList()) {
+      <div class="flex items-center justify-center h-40 text-slate-400 gap-3">
+        <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <span class="text-sm">Chargement…</span>
+      </div>
+    } @else if (stockService.movements().length === 0) {
+      <div class="flex flex-col items-center justify-center h-40 text-slate-400 gap-2">
+        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        <span class="text-sm">Aucun mouvement trouvé</span>
+      </div>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50">
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">Date</th>
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">Produit</th>
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">Type</th>
+              <th class="px-4 py-3 text-right font-semibold text-slate-600">Quantité</th>
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">Motif</th>
+              <th class="px-4 py-3 text-left font-semibold text-slate-600">Utilisateur</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            @for (m of stockService.movements(); track m.id) {
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="px-4 py-3 text-slate-500 whitespace-nowrap">
+                  {{ m.movement_date | date:'dd/MM/yyyy HH:mm' }}
+                </td>
+                <td class="px-4 py-3 font-medium text-slate-700">
+                  {{ m.product?.name ?? '—' }}
+                  @if (m.product?.form) {
+                    <span class="ml-1 text-xs text-slate-400">{{ m.product!.form }}</span>
+                  }
+                </td>
+                <td class="px-4 py-3">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold" [class]="typeBadgeClass(m.type)">
+                    {{ typeLabel(m.type) }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-right font-bold"
+                    [class]="m.type === 'outbound' ? 'text-red-600' : m.type === 'inbound' ? 'text-emerald-600' : 'text-amber-600'">
+                  {{ m.type === 'outbound' ? '-' : '+' }}{{ m.qty }}
+                </td>
+                <td class="px-4 py-3 text-slate-500 max-w-xs truncate">{{ m.note }}</td>
+                <td class="px-4 py-3 text-slate-500">{{ m.user?.name ?? '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      @if (stockService.totalPages() > 1) {
+        <div class="px-4 py-3 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
+          <span>{{ stockService.totalMovements() }} mouvement(s) au total</span>
+          <span>Page {{ stockService.currentPage() }} / {{ stockService.totalPages() }}</span>
+        </div>
+      }
+    }
+  </div>
+}
+
+<!-- ── ONGLET : Ajustement ─────────────────────────────────────────────────── -->
+@if (activeTab() === 'adjust') {
+  <div class="max-w-xl">
+    <div class="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
+      <h2 class="font-semibold text-slate-700 mb-5">Mouvement manuel de stock</h2>
+
+      @if (adjustSuccess) {
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4 text-sm text-emerald-700 flex items-center gap-2">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          {{ adjustSuccess }}
+        </div>
+      }
+
+      @if (adjustError) {
+        <div class="bg-red-50 border border-red-200 rounded-xl p-3 mb-4 text-sm text-red-700 flex items-center gap-2">
+          <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          {{ adjustError }}
+        </div>
+      }
+
+      <form (ngSubmit)="submitAdjust()" #f="ngForm" class="space-y-4">
+
+        <!-- Produit -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Produit <span class="text-red-500">*</span></label>
+          <select [ngModel]="formProductId()" (ngModelChange)="formProductId.set($event)" name="product_id" required
+            class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+            <option value="">Sélectionner un produit…</option>
+            @for (p of products(); track p.id) {
+              <option [value]="p.id">{{ p.name }}{{ p.form ? ' — ' + p.form : '' }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Aperçu stock actuel -->
+        @if (selectedProduct()) {
+          <div class="bg-slate-50 rounded-xl px-4 py-3 text-sm flex gap-6">
+            <div>
+              <div class="text-xs text-slate-400 mb-0.5">Stock entrepôt</div>
+              <div class="font-bold text-slate-700">{{ selectedProduct()!.global_stock ?? 0 }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400 mb-0.5">Stock comptoir</div>
+              <div class="font-bold text-slate-700">{{ selectedProduct()!.display_stock ?? 0 }}</div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-400 mb-0.5">Seuil réappro.</div>
+              <div class="font-bold text-slate-700">{{ selectedProduct()!.reorder_level ?? '—' }}</div>
+            </div>
+          </div>
+        }
+
+        <!-- Type -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Type de mouvement <span class="text-red-500">*</span></label>
+          <div class="grid grid-cols-3 gap-2">
+            @for (opt of [
+              { value: 'inbound',    label: 'Entrée',      color: 'emerald' },
+              { value: 'outbound',   label: 'Sortie',      color: 'red'     },
+              { value: 'adjustment', label: 'Ajustement',  color: 'amber'   }
+            ]; track opt.value) {
+              <button type="button"
+                (click)="setType(opt.value)"
+                [class]="formType() === opt.value
+                  ? (opt.color === 'emerald' ? 'bg-emerald-600 text-white border-emerald-600'
+                     : opt.color === 'red'   ? 'bg-red-600 text-white border-red-600'
+                     : 'bg-amber-500 text-white border-amber-500')
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                class="px-3 py-2 text-sm font-medium rounded-xl border transition-colors">
+                {{ opt.label }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Quantité -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Quantité <span class="text-red-500">*</span></label>
+          <input type="number" [(ngModel)]="formQty" name="qty" min="1" required
+            class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"/>
+        </div>
+
+        <!-- Motif -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Motif / Note <span class="text-red-500">*</span></label>
+          <textarea [(ngModel)]="formNote" name="note" rows="3" required
+            placeholder="Ex : Livraison fournisseur, casse, inventaire…"
+            class="w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none"></textarea>
+        </div>
+
+        <button type="submit"
+          [disabled]="stockService.saving()"
+          class="w-full py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2">
+          @if (stockService.saving()) {
+            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+          }
+          Enregistrer le mouvement
+        </button>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ── ONGLET : Alertes ────────────────────────────────────────────────────── -->
+@if (activeTab() === 'alerts') {
+
+  @if (stockService.loadingAlerts()) {
+    <div class="flex items-center justify-center h-40 text-slate-400 gap-3">
+      <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+      </svg>
+      <span class="text-sm">Chargement des alertes…</span>
+    </div>
+  } @else if (stockService.alerts().length === 0) {
+    <div class="flex flex-col items-center justify-center h-52 text-slate-400 gap-3">
+      <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span class="text-sm font-medium">Tous les stocks sont dans les normes</span>
+    </div>
+  } @else {
+    <div class="space-y-3">
+      @for (alert of stockService.alerts(); track alert.id) {
+        <div class="flex items-start gap-4 p-4 rounded-2xl border" [class]="severityClass(alert.severity)">
+          <div class="shrink-0 mt-0.5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" [attr.d]="alertIcon(alert.type)"/>
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-sm">{{ alert.product_name }}</div>
+            <div class="text-sm mt-0.5">{{ alert.message }}</div>
+            <div class="text-xs mt-1 opacity-75">{{ alert.action }}</div>
+          </div>
+          <div class="shrink-0 text-right">
+            <div class="text-2xl font-bold">{{ alert.current_stock }}</div>
+            @if (alert.minimum_stock) {
+              <div class="text-xs opacity-70">seuil {{ alert.minimum_stock }}</div>
+            }
+            @if (alert.days_left !== undefined) {
+              <div class="text-xs opacity-70">J-{{ alert.days_left }}</div>
+            }
+          </div>
+          <button (click)="setTab('adjust'); formProductId.set(alert.product_id)"
+            class="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/60 hover:bg-white transition-colors border border-current/20">
+            Ajuster
+          </button>
+        </div>
+      }
+    </div>
+  }
+}

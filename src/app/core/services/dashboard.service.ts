@@ -2,76 +2,77 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, catchError, of, tap } from 'rxjs';
 
-export interface DashboardSummary {
-  pharmacies: number;
-  users: number;
-  salesToday: number;
-  lowStockCount: number;
-  weeklySales: { day: string; amount: number }[];
-  recentActivities: Activity[];
-}
-
-export interface Activity {
+export interface LowStockItem {
   id: number;
-  type: string;
-  description: string;
-  time: string;
-  user: string;
+  name: string;
+  global_stock: number;
+  reorder_level: number;
+  form?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+export interface RecentSale {
+  id: number;
+  reference: string;
+  total_amount: number;
+  payment_method: string;
+  status: string;
+  client_name: string | null;
+  client?: { first_name: string; last_name: string };
+  created_at: string;
+}
+
+export interface PaymentBreakdown {
+  payment_method: string;
+  count: number;
+  total: number;
+}
+
+export interface WeeklyDay {
+  day: string;
+  date: string;
+  total: number;
+  count: number;
+}
+
+export interface DashboardData {
+  today: { sales_count: number; sales_total: number };
+  weekly_sales: WeeklyDay[];
+  stock: { total: number; low_stock: number; out_of_stock: number; low_stock_items: LowStockItem[] };
+  clients: { total: number; new_this_week: number };
+  recent_sales: RecentSale[];
+  payment_breakdown: PaymentBreakdown[];
+}
+
+@Injectable({ providedIn: 'root' })
 export class DashboardService {
   private http = inject(HttpClient);
-  private API = 'http://127.0.0.1:8000/api';
+  private API  = 'http://127.0.0.1:8000/api';
 
-  // Signals pour les données du dashboard
-  summary = signal<DashboardSummary | null>(null);
-  loading = signal<boolean>(true);
+  data    = signal<DashboardData | null>(null);
+  loading = signal(true);
+  error   = signal<string | null>(null);
 
-  fetchDashboardData(): Observable<DashboardSummary> {
+  // Compat alias pour home.ts existant
+  get summary() { return this.data; }
+
+  fetch(): Observable<DashboardData> {
     this.loading.set(true);
-    
-    return this.http.get<DashboardSummary>(`${this.API}/dashboard`).pipe(
-      tap(data => {
-        this.summary.set(data);
+    this.error.set(null);
+    return this.http.get<DashboardData>(`${this.API}/dashboard`).pipe(
+      tap(d => { this.data.set(d); this.loading.set(false); }),
+      catchError(err => {
         this.loading.set(false);
-      }),
-      catchError(error => {
-        console.error('Erreur lors du chargement des données:', error);
-        this.loading.set(false);
-        
-        // Retourner des données mockées en cas d'erreur
-        const mockData: DashboardSummary = {
-          pharmacies: 12,
-          users: 45,
-          salesToday: 12500,
-          lowStockCount: 8,
-          weeklySales: [
-            { day: 'Lun', amount: 8500 },
-            { day: 'Mar', amount: 9200 },
-            { day: 'Mer', amount: 7800 },
-            { day: 'Jeu', amount: 10500 },
-            { day: 'Ven', amount: 12500 },
-            { day: 'Sam', amount: 9500 },
-            { day: 'Dim', amount: 5200 },
-          ],
-          recentActivities: [
-            { id: 1, type: 'sale', description: 'Commande #00123 reçue', time: 'il y a 1 heure', user: 'Marie Dupont' },
-            { id: 2, type: 'stock', description: 'Stock de Paracétamol mis à jour', time: 'il y a 2 heures', user: 'Jean Martin' },
-            { id: 3, type: 'user', description: 'Nouvel utilisateur ajouté', time: 'il y a 3 heures', user: 'Admin System' },
-            { id: 4, type: 'alert', description: 'Alerte stock bas: Amoxicilline', time: 'il y a 4 heures', user: 'Système' },
-          ]
-        };
-        
-        this.summary.set(mockData);
-        return of(mockData);
+        const msg = err?.error?.message || err?.message || `Erreur ${err?.status}`;
+        this.error.set(`Impossible de charger les données : ${msg}`);
+        console.error('[Dashboard] Erreur API:', err);
+        return of(null as any);
       })
     );
   }
 
-  refresh(): void {
-    this.fetchDashboardData().subscribe();
+  refresh(): void { this.fetch().subscribe(); }
+
+  formatCurrency(amount: number): string {
+    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0 }).format(amount) + ' FCFA';
   }
 }
