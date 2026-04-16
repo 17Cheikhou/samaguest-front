@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { catchError, finalize, of } from 'rxjs';
 import { UserService } from '../../core/services/user.service';
+import { PermissionService, PermissionItem } from '../../core/services/permission.service';
 
 @Component({
   selector: 'app-user-list',
@@ -14,9 +15,10 @@ import { UserService } from '../../core/services/user.service';
   styleUrls: ['./user-list.css'],
 })
 export class UserList implements OnInit {
-  auth = inject(AuthService);
-  userservice = inject(UserService);
-  router = inject(Router);
+  auth             = inject(AuthService);
+  userservice      = inject(UserService);
+  router           = inject(Router);
+  permissionService = inject(PermissionService);
 
   // Signaux pour l'état
   loading = signal(false);
@@ -43,9 +45,14 @@ export class UserList implements OnInit {
     activeToday: 0,
     withPharmacy: 0,
   });
-  
-  // Modal
-  // modal removed — navigation to profile used instead
+
+  // ── Panneau permissions ───────────────────────────────────────────────────
+  permPanel = signal(false);
+  permUser  = signal<{ id: number; name: string; role: string } | null>(null);
+  // permissions groupées par catégorie avec les états locaux (pending changes)
+  permCategories = signal<Record<string, PermissionItem[]>>({});
+  // map des changements en attente: key → true/false/null
+  pendingOverrides = signal<Record<string, boolean | null>>({});
   
   // Pagination
   totalPages = computed(() => Math.ceil(this.filteredUsers().length / this.itemsPerPage()));
@@ -190,6 +197,118 @@ export class UserList implements OnInit {
    */
   viewUserProfile(userId: number) {
     this.router.navigate(['/profile', userId]);
+  }
+
+  // ── Gestion des permissions ───────────────────────────────────────────────
+
+  openPermissions(user: any): void {
+    this.permPanel.set(true);
+    this.permUser.set(null);
+    this.permCategories.set({});
+    this.pendingOverrides.set({});
+
+    this.permissionService.fetchUserPermissions(user.id).subscribe(res => {
+      if (res) {
+        this.permUser.set(res.user);
+        this.permCategories.set(res.permissions);
+      }
+    });
+  }
+
+  closePermPanel(): void {
+    this.permPanel.set(false);
+    this.permUser.set(null);
+    this.pendingOverrides.set({});
+  }
+
+  /** Retourne l'état effectif affiché (pending en priorité, sinon valeur serveur) */
+  getEffective(item: PermissionItem): boolean {
+    const pending = this.pendingOverrides();
+    if (item.key in pending) {
+      const v = pending[item.key];
+      return v === null ? item.from_role : v;
+    }
+    return item.effective;
+  }
+
+  /** Indique si ce permission a une surcharge (pending ou serveur) */
+  hasOverride(item: PermissionItem): boolean {
+    const pending = this.pendingOverrides();
+    if (item.key in pending) {
+      const v = pending[item.key];
+      return v !== null;
+    }
+    return item.override !== null;
+  }
+
+  /** Toggle la permission : crée/modifie/supprime l'override */
+  togglePermission(item: PermissionItem): void {
+    const current = this.getEffective(item);
+    const newValue = !current;
+    // Si le nouvel état = défaut du rôle → on supprime l'override (null)
+    const override: boolean | null = newValue === item.from_role ? null : newValue;
+
+    this.pendingOverrides.update(p => ({ ...p, [item.key]: override }));
+  }
+
+  /** Réinitialise une permission à son défaut de rôle */
+  resetPermission(item: PermissionItem): void {
+    this.pendingOverrides.update(p => ({ ...p, [item.key]: null }));
+  }
+
+  get hasPendingChanges(): boolean {
+    return Object.keys(this.pendingOverrides()).length > 0;
+  }
+
+  savePermissions(): void {
+    const userId = this.permUser()?.id;
+    if (!userId) return;
+
+    const overrides = Object.entries(this.pendingOverrides()).map(([key, value]) => ({
+      key,
+      value
+    }));
+
+    this.permissionService.updateUserPermissions(userId, overrides).subscribe(res => {
+      if (res) {
+        // Recharger les permissions depuis le serveur
+        this.permissionService.fetchUserPermissions(userId).subscribe(fresh => {
+          if (fresh) {
+            this.permCategories.set(fresh.permissions);
+            this.pendingOverrides.set({});
+          }
+        });
+      }
+    });
+  }
+
+  /** Indique si une permission spécifique a un changement en attente */
+  hasPendingChange(key: string): boolean {
+    return key in this.pendingOverrides();
+  }
+
+  /** Nombre total de changements en attente */
+  get pendingCount(): number {
+    return Object.keys(this.pendingOverrides()).length;
+  }
+
+  /** Couleur de l'indicateur d'origine d'une permission */
+  getOverrideIndicatorClass(item: PermissionItem): string {
+    const pending = this.pendingOverrides();
+    const pendingValue = pending[item.key];
+
+    if (item.key in pending) {
+      if (pendingValue === null) return 'bg-slate-300'; // reset vers défaut
+      return pendingValue ? 'bg-emerald-500' : 'bg-red-400';
+    }
+    if (item.override !== null) {
+      return item.override ? 'bg-emerald-500' : 'bg-red-400';
+    }
+    return 'bg-slate-300'; // défaut du rôle
+  }
+
+  permCategList(): string[] {
+    return Object.keys(this.permCategories());
   }
 
   refreshData() {

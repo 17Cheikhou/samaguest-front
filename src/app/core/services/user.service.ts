@@ -26,6 +26,10 @@ export class UserService {
       tap(res => {
         this.authService.currentUser.set(res.user);
         localStorage.setItem('user', JSON.stringify(res.user));
+        if (res.permissions) {
+          this.authService.permissions.set(res.permissions);
+          localStorage.setItem('permissions', JSON.stringify(res.permissions));
+        }
       })
     );
   }
@@ -45,6 +49,11 @@ export class UserService {
 
   getRole(): string {
     return this.user()?.role?.name || this.user()?.role || '';
+  }
+
+  /** Vérifie une permission effective (inclut les surcharges admin) */
+  hasPermission(key: string): boolean {
+    return this.authService.hasPermission(key);
   }
 
   isAllowed(roles: string[]): boolean {

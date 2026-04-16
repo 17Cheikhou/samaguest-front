@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(python3 -c \" import json with open\\('C:/Users/lenovo/.claude/projects/d--Project-Save-frontend-Smaguest/c6304b8f-f8dd-4a9e-9054-d6b28fcbf771.jsonl', 'r', encoding='utf-8'\\) as f: for line in f: try: obj = json.loads\\(line\\) if obj.get\\('type'\\) == 'assistant': content = obj.get\\('message', {}\\).get\\('content', []\\) for block in content: if isinstance\\(block, dict\\) and block.get\\('type'\\) == 'text': text = block.get\\('text', ''\\) if 'Priorit' in text and '5.' in text and '6.' in text: print\\(text[:4000]\\) print\\('===FOUND==='\\) except: pass \")",
-      "Bash(python3)"
+      "Bash(python3)",
+      "Bash(find \"d:\\\\\\\\Project\\\\\\\\backend Smaguest - C2\\\\\\\\app\" -name \"*Permission*\")"
     ]
   }
 }
